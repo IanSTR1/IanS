@@ -1,0 +1,311 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+public class ControleEstoqueApp extends JFrame {
+
+    private Map<String, Equipamento> estoque;
+    private List<PedidoReserva> pedidosReserva;
+
+    private JTextField nomeField, tipoField, quantidadeField, descricaoField, nomeReservaField;
+    private JTextArea listaEstoqueTextArea, listaReservaTextArea;
+
+    public ControleEstoqueApp() {
+        estoque = new HashMap<>();
+        pedidosReserva = new ArrayList<>();
+
+        // Configuração da janela principal
+        setTitle("Controle de Estoque");
+        setSize(600, 400);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        // Componentes da interface
+        JTabbedPane tabbedPane = new JTabbedPane();
+
+        JPanel adicionarPanel = criarAdicionarPanel();
+        tabbedPane.addTab("Adicionar Equipamento", adicionarPanel);
+
+        JPanel visualizarPanel = criarVisualizarPanel();
+        tabbedPane.addTab("Visualizar Estoque", visualizarPanel);
+
+        JPanel reservaPanel = criarReservaPanel();
+        tabbedPane.addTab("Pedidos de Reserva", reservaPanel);
+
+        add(tabbedPane, BorderLayout.CENTER);
+    }
+
+    private JPanel criarAdicionarPanel() {
+        JPanel panel = new JPanel(new GridLayout(7, 2));
+
+        // Componentes da interface
+        panel.add(new JLabel("Nome:"));
+        nomeField = new JTextField();
+        panel.add(nomeField);
+
+        panel.add(new JLabel("Tipo:"));
+        tipoField = new JTextField();
+        panel.add(tipoField);
+
+        panel.add(new JLabel("Quantidade:"));
+        quantidadeField = new JTextField();
+        panel.add(quantidadeField);
+
+        panel.add(new JLabel("Descrição:"));
+        descricaoField = new JTextField();
+        panel.add(descricaoField);
+
+        panel.add(new JLabel("Nome de quem reservou:"));
+        nomeReservaField = new JTextField();
+        panel.add(nomeReservaField);
+
+        JButton btnAdicionarAoEstoque = new JButton("Adicionar ao Estoque");
+        btnAdicionarAoEstoque.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                adicionarEquipamento();
+            }
+        });
+        panel.add(btnAdicionarAoEstoque);
+
+        JButton btnAdicionarReserva = new JButton("Adicionar à Reserva");
+        btnAdicionarReserva.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                adicionarReserva();
+            }
+        });
+        panel.add(btnAdicionarReserva);
+
+        JButton btnAumentarQuantidade = new JButton("Aumentar Quantidade");
+        btnAumentarQuantidade.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                aumentarQuantidade();
+            }
+        });
+        panel.add(btnAumentarQuantidade);
+
+        return panel;
+    }
+
+    private JPanel criarVisualizarPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+
+        listaEstoqueTextArea = new JTextArea();
+        listaEstoqueTextArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(listaEstoqueTextArea);
+
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        JButton btnAtualizar = new JButton("Atualizar Lista");
+        btnAtualizar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                atualizarListaEstoque();
+            }
+        });
+        panel.add(btnAtualizar, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    private JPanel criarReservaPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+
+        listaReservaTextArea = new JTextArea();
+        listaReservaTextArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(listaReservaTextArea);
+
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        JButton btnAtualizarReserva = new JButton("Atualizar Pedidos de Reserva");
+        btnAtualizarReserva.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                atualizarListaReserva();
+            }
+        });
+        panel.add(btnAtualizarReserva, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    private void adicionarEquipamento() {
+        String nome = nomeField.getText();
+        String tipo = tipoField.getText();
+        int quantidade = Integer.parseInt(quantidadeField.getText());
+        String descricao = descricaoField.getText();
+
+        // Verificar se o equipamento já existe no estoque
+        if (estoque.containsKey(nome)) {
+            // Verificar e atualizar pedidos de reserva para este equipamento
+            verificarAtualizarPedidosReserva(nome, quantidade);
+
+            // Aumentar a quantidade do equipamento no estoque
+            int quantidadeAtual = estoque.get(nome).getQuantidade();
+            estoque.get(nome).setQuantidade(quantidadeAtual + quantidade);
+
+            JOptionPane.showMessageDialog(this, "Quantidade do equipamento no estoque atualizada!");
+        } else {
+            Equipamento equipamento = new Equipamento(nome, tipo, quantidade, descricao);
+            estoque.put(nome, equipamento);
+            JOptionPane.showMessageDialog(this, "Equipamento adicionado ao estoque!");
+        }
+    }
+
+    private void adicionarReserva() {
+        String nome = nomeField.getText();
+        int quantidadeReserva = Integer.parseInt(quantidadeField.getText());
+        String nomeReserva = nomeReservaField.getText();
+
+        // Verificar se o equipamento está em estoque
+        if (estoque.containsKey(nome)) {
+            // Adicionar o pedido de reserva à lista de pedidos
+            PedidoReserva pedidoReserva = new PedidoReserva(nome, quantidadeReserva, nomeReserva);
+            pedidosReserva.add(pedidoReserva);
+
+            // Reduzir a quantidade do equipamento no estoque
+            int quantidadeAtual = estoque.get(nome).getQuantidade();
+            estoque.get(nome).setQuantidade(quantidadeAtual - quantidadeReserva);
+
+            JOptionPane.showMessageDialog(this, "Equipamento adicionado à reserva!");
+        } else {
+            JOptionPane.showMessageDialog(this, "Equipamento não encontrado no estoque. Adicione-o ao estoque antes de reservar.");
+        }
+    }
+
+    private void aumentarQuantidade() {
+        String nome = nomeField.getText();
+        if (estoque.containsKey(nome)) {
+            int quantidadeAtual = estoque.get(nome).getQuantidade();
+            int quantidadeNova = quantidadeAtual + Integer.parseInt(quantidadeField.getText());
+            estoque.get(nome).setQuantidade(quantidadeNova);
+
+            JOptionPane.showMessageDialog(this, "Quantidade do equipamento atualizada!");
+        } else {
+            JOptionPane.showMessageDialog(this, "Equipamento não encontrado no estoque!");
+        }
+    }
+
+    private void verificarAtualizarPedidosReserva(String nomeEquipamento, int quantidadeAdicionada) {
+        // Verificar e atualizar pedidos de reserva para este equipamento
+        Iterator<PedidoReserva> iterator = pedidosReserva.iterator();
+        while (iterator.hasNext()) {
+            PedidoReserva pedido = iterator.next();
+            if (pedido.getNomeEquipamento().equals(nomeEquipamento)) {
+                // Atualizar o pedido de reserva
+                int quantidadeAtual = pedido.getQuantidade();
+                if (quantidadeAtual <= quantidadeAdicionada) {
+                    // Se a quantidade total do pedido for atendida, remover o pedido de reserva
+                    iterator.remove();
+                } else {
+                    // Atualizar a quantidade no pedido de reserva
+                    pedido.setQuantidade(quantidadeAtual - quantidadeAdicionada);
+                }
+            }
+        }
+    }
+
+    private void atualizarListaEstoque() {
+        StringBuilder lista = new StringBuilder("Lista de Equipamentos em Estoque:\n");
+
+        for (Equipamento equipamento : estoque.values()) {
+            lista.append("Nome: ").append(equipamento.getNome()).append("\n");
+            lista.append("Tipo: ").append(equipamento.getTipo()).append("\n");
+            lista.append("Quantidade: ").append(equipamento.getQuantidade()).append("\n");
+            lista.append("Descrição: ").append(equipamento.getDescricao()).append("\n\n");
+        }
+
+        listaEstoqueTextArea.setText(lista.toString());
+    }
+
+    private void atualizarListaReserva() {
+        StringBuilder lista = new StringBuilder("Lista de Pedidos de Reserva:\n");
+
+        for (PedidoReserva pedido : pedidosReserva) {
+            lista.append("Nome do Equipamento: ").append(pedido.getNomeEquipamento()).append("\n");
+            lista.append("Quantidade: ").append(pedido.getQuantidade()).append("\n");
+            lista.append("Nome do Reservante: ").append(pedido.getNomeReserva()).append("\n\n");
+        }
+
+        listaReservaTextArea.setText(lista.toString());
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new ControleEstoqueApp().setVisible(true);
+            }
+        });
+    }
+}
+
+class Equipamento {
+    private String nome;
+    private String tipo;
+    private int quantidade;
+    private String descricao;
+
+    public Equipamento(String nome, String tipo, int quantidade, String descricao) {
+        this.nome = nome;
+        this.tipo = tipo;
+        this.quantidade = quantidade;
+        this.descricao = descricao;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public String getTipo() {
+        return tipo;
+    }
+
+    public int getQuantidade() {
+        return quantidade;
+    }
+
+    public void setQuantidade(int quantidade) {
+        this.quantidade = quantidade;
+    }
+
+    public String getDescricao() {
+        return descricao;
+    }
+}
+
+class PedidoReserva {
+    private String nomeEquipamento;
+    private int quantidade;
+    private String nomeReserva;
+
+    public PedidoReserva(String nomeEquipamento, int quantidade, String nomeReserva) {
+        this.nomeEquipamento = nomeEquipamento;
+        this.quantidade = quantidade;
+        this.nomeReserva = nomeReserva;
+    }
+
+    public String getNomeEquipamento() {
+        return nomeEquipamento;
+    }
+
+    public int getQuantidade() {
+        return quantidade;
+    }
+
+    public void setQuantidade(int quantidade) {
+        this.quantidade = quantidade;
+    }
+
+    public String getNomeReserva() {
+        return nomeReserva;
+    }
+}
